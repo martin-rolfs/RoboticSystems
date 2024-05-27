@@ -55,7 +55,7 @@ class Transform:
 
         return e, np.linalg.norm(e)
 
-    def getQuaternion(self):
+    def getQuaternion(self) -> np.array:
         R = self.H[0:3, 0:3]
         q = np.zeros((4,1))
         w = 1
