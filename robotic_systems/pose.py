@@ -1,7 +1,7 @@
 import numpy as np
 
 class Transform:
-    def __init__(self, eulerAngles: np.array, position: np.array, transformationMatrix: np.array):
+    def __init__(self, eulerAngles: np.array=None, position: np.array=None, transformationMatrix: np.array=None, sequence: str="ZYX"):
         if not transformationMatrix is None:
             self.H = transformationMatrix
             self.eulerAngles = Transform.rot2eul(self.H[0:3, 0:3])
@@ -10,16 +10,16 @@ class Transform:
             self.eulerAngles = eulerAngles
             self.position = position
             self.H = np.eye(4)
-            self.H[0:3, 0:3] = Transform.eul2rot(self.eulerAngles)
+            self.H[0:3, 0:3] = Transform.eul2rot(self.eulerAngles, sequence)
             self.H[0:3, 3] = self.position 
         else:
             raise ArithmeticError("Euler angles and the position or the transformation matrix has to be provided.")
 
     def __str__(self) -> str:
         return str(f"""⌈ {round(self.H[0,0], 2)}  {round(self.H[0,1], 2)}  {round(self.H[0,2], 2)}  {round(self.H[0,3], 2)} ⌉
-                   | {round(self.H[1,0], 2)}  {round(self.H[1,1], 2)}  {round(self.H[1,2], 2)}  {round(self.H[1,3], 2)} |
-                   | {round(self.H[2,0], 2)}  {round(self.H[2,1], 2)}  {round(self.H[2,2], 2)}  {round(self.H[2,3], 2)} |
-                   ⌊ {round(self.H[3,0], 2)}  {round(self.H[3,1], 2)}  {round(self.H[3,2], 2)}  {round(self.H[3,3], 2)} ⌋""")
+| {round(self.H[1,0], 2)}  {round(self.H[1,1], 2)}  {round(self.H[1,2], 2)}  {round(self.H[1,3], 2)} |
+| {round(self.H[2,0], 2)}  {round(self.H[2,1], 2)}  {round(self.H[2,2], 2)}  {round(self.H[2,3], 2)} |
+⌊ {round(self.H[3,0], 2)}  {round(self.H[3,1], 2)}  {round(self.H[3,2], 2)}  {round(self.H[3,3], 2)} ⌋""")
 
     def setTransformMatrix(self, transformMatrix: np.array):
         self.H = transformMatrix
@@ -54,10 +54,57 @@ class Transform:
         e = np.concatenate((t, 1/2*r))
 
         return e, np.linalg.norm(e)
+
+    def getQuaternion(self):
+        R = self.H[0:3, 0:3]
+        q = np.zeros((4,1))
+        w = 1
+
+        if R[2,2] < 0:
+            if R[0,0] > R[1,1]:
+                w = 1 + R[0,0] - R[1,1] - R[2,2]
+                q[0] = w
+                q[1] = R[0,1] + R[1,0]
+                q[2] = R[2,0] + R[0,2]
+                q[3] = R[1,2] - R[2,1]
+            else:
+                q[0] = R[0,1] + R[1,0]
+                w = 1 - R[0,0] + R[1,1] - R[2,2]
+                q[1] = w
+                q[2] = R[1,2] + R[2,1]              
+                q[2] = R[2,0] - R[0,2]
+        else:
+            if R[0,0] < -R[1,1]:
+                q[0] = R[2,0] + R[0,2]
+                q[1] = R[1,2] + R[2,1]
+                w = 1 - R[0,0] - R[1,1] + R[2,2]
+                q[2] = w
+                q[3] = R[0,1] - R[1,0]
+            else:
+                q[0] = R[1,2] - R[2,1]
+                q[1] = R[2,0] - R[0,2]
+                q[2] = R[0,1] - R[1,0]
+                w = 1 + R[0,0] + R[1,1] + R[2,2]
+                q[3] = w
+
+        return q * 0.5 / np.sqrt(w)
+                
         
     @staticmethod
-    def eul2rot(eulerAngles: np.array):
-        return Transform.rotZ(eulerAngles[2]) @ Transform.rotY(eulerAngles[1]) @ Transform.rotX(eulerAngles[0])
+    def eul2rot(eulerAngles: np.array, sequence: str="ZYX"):
+        R = np.eye(3)
+        s = 0
+        for c in sequence:            
+            if c == 'Z':
+                R = R @ Transform.rotZ(eulerAngles[s])
+            elif c == 'Y':
+                R = R @ Transform.rotY(eulerAngles[s])
+            elif c == 'X':
+                R = R @ Transform.rotX(eulerAngles[s])
+            else:
+                raise RuntimeError("Only 'X', 'Y', 'Z' are allowed for rotation sequence.")
+            s += 1
+        return R
 
     @staticmethod
     def rot2eul(R: np.array): 
@@ -82,7 +129,7 @@ class Transform:
     
     @staticmethod
     def rotY(angle: float):
-        return np.array([[np.cos(angle), 0, -np.sin(angle)], [0, 1, 0], [np.sin(angle), 0, np.cos(angle)]])
+        return np.array([[np.cos(angle), 0, np.sin(angle)], [0, 1, 0], [-np.sin(angle), 0, np.cos(angle)]])
     
     @staticmethod
     def rotZ(angle: float):
