@@ -2,6 +2,19 @@ import numpy as np
 
 class Transform:
     def __init__(self, eulerAngles: np.array=None, position: np.array=None, transformationMatrix: np.array=None, sequence: str="ZYX"):
+        """Constructs a transform object from euler angles and position or a homogenous transformation matrix.
+        If constructed with position and euler angles, pass None for transformationMatrix. Do the opposite if 
+        transformationMatrix is used for construction. 
+
+        Args:
+            eulerAngles (np.array): The 3 element vector of euler angles. Defaults to None.
+            position (np.array): The 3 element vector of the position. Defaults to None.
+            transformationMatrix (np.array): The 4x4 homogenous transformation matrix. Defaults to None.
+            sequence (str, optional): The rotation sequence of the euler angles. Defaults to "ZYX".
+
+        Raises:
+            ArithmeticError: Throws error with wrong parameter combination.
+        """
         if not transformationMatrix is None:
             self.H = transformationMatrix
             self.eulerAngles = Transform.rot2eul(self.H[0:3, 0:3])
@@ -40,6 +53,14 @@ class Transform:
         return T @ self.H   
 
     def calculatePoseError(self, target: np.array) -> tuple:
+        """Calculates the error between this transform and a homogenous transformation matrix.
+
+        Args:
+            target (np.array): The other transformation matrix.
+
+        Returns:
+            tuple: A tuple containing the 6 dimensional error vector and its norm.
+        """
         # calculate translational error
         t = target[0:3,3] - self.position
         t = t.reshape(3, 1) # col vec
@@ -56,6 +77,11 @@ class Transform:
         return e, np.linalg.norm(e)
 
     def getQuaternion(self) -> np.array:
+        """Returns a quaternion representation of the rotational part of the pose.  
+
+        Returns:
+            np.array: The quaternion [w, x, y, z] as an np.array. 
+        """        
         R = self.H[0:3, 0:3]
         q = np.zeros((4,1)) # w x y z
 
@@ -116,9 +142,30 @@ class Transform:
 
         return q
                 
+    @staticmethod
+    def invertHomogenousTransform(H: np.array) -> np.array:
+        invH = np.eye(4)
+    
+        R = H[0:3, 0:3].T
+        invH[0:3, 0:3] = R
+        invH[0:3, 3] = -R @ H[0:3, 3]
+
+        return invH
         
     @staticmethod
-    def eul2rot(eulerAngles: np.array, sequence: str="ZYX"):
+    def eul2rot(eulerAngles: np.array, sequence: str="ZYX") -> np.array:
+        """Converts euler angles to a 3x3 rotation matrix. 
+
+        Args:
+            eulerAngles (np.array): The euler angles as an np.array.
+            sequence (str, optional): Determines the rotation order of the euler angles. Defaults to "ZYX".
+
+        Raises:
+            RuntimeError: Throws error of order is not supported.
+
+        Returns:
+            _type_: The 3x3 rotation matrix. 
+        """
         R = np.eye(3)
         s = 0
         for c in sequence:            
@@ -134,7 +181,7 @@ class Transform:
         return R
 
     @staticmethod
-    def rot2eul(R: np.array): 
+    def rot2eul(R: np.array) -> np.array: 
         sy = np.sqrt(R[0,0] * R[0,0] +  R[1,0] * R[1,0])
     
         singular = sy < 1e-6
@@ -151,13 +198,13 @@ class Transform:
         return np.array([x, y, z]).reshape(3, 1)
     
     @staticmethod
-    def rotX(angle: float):
+    def rotX(angle: float) -> np.array:
         return np.array([[1, 0, 0], [0, np.cos(angle), -np.sin(angle)], [0, np.sin(angle), np.cos(angle)]])
     
     @staticmethod
-    def rotY(angle: float):
+    def rotY(angle: float) -> np.array:
         return np.array([[np.cos(angle), 0, np.sin(angle)], [0, 1, 0], [-np.sin(angle), 0, np.cos(angle)]])
     
     @staticmethod
-    def rotZ(angle: float):
+    def rotZ(angle: float) -> np.array:
         return np.array([[np.cos(angle), -np.sin(angle), 0], [np.sin(angle), np.cos(angle), 0], [0, 0, 1]])

@@ -6,6 +6,8 @@ from math import sin, cos
 
 from os.path import join
 
+from robotic_systems.pose import Transform
+
 class Robot:    
     def __init__(self, initConfig: np.array, dh_theta: np.array, dh_d: np.array, dh_a: np.array, dh_alpha: np.array, upperLimit: np.array, lowerLimit: np.array, position: np.array=np.zeros((3, 1))):
         self.config = initConfig
@@ -89,6 +91,29 @@ class Robot:
 
         return T
 
+    def convertToTCS(self, pose: np.array, config: np.array=None, tooltransformationMatrix: np.array=np.eye(4)) -> np.array:
+        """Perform basis transformation from worldspace pose to tool coordinate system (TCS).
+
+        Args:
+            pose (np.array): The pose  as a 4x4 homogenous transformation matrix to transform.
+            config (np.array, optional): The configuration of the robot. If it is None, the attribute is used. Defaults to None.
+            toolTransformation (np.array, optional): The transformation matrix from the TFC to the TCP. Defaults to np.eye(4).
+
+        Returns:
+            np.ndarray: Returns the transformation matrix as numpy array.
+        """        
+        if config is None:
+            config = self.config
+
+        # get complete transformation matrix
+        baseToTCP = self.getTCP(config, tooltransformationMatrix)
+
+        poseInTCS = np.linalg.inv(baseToTCP) @ pose
+        rotInTCS = Transform.invertHomogenousTransform(baseToTCP) @ pose
+        poseInTCS[0:3, 0:3] = rotInTCS[0:3, 0:3]
+
+        return poseInTCS
+
     def getTransformMatrixSymbolic(self, theta: float, d: float, a: float, alpha: float, name: str="j") -> sp.Matrix:
         # assume rotary joints only
         j = sp.Symbol(name, real=True)
@@ -100,9 +125,9 @@ class Robot:
     
     def getTransformMatrix(self, theta: float, d: float, a: float, alpha: float, j: float) -> np.ndarray:
         return np.array([[cos(j+theta), -sin(j+theta)*cos(alpha),  sin(j+theta)*sin(alpha), a*cos(j+theta)],
-                           [sin(j+theta),  cos(j+theta)*cos(alpha), -cos(j+theta)*sin(alpha), a*sin(j+theta)], 
-                           [0,             sin(alpha),               cos(alpha),              d], 
-                           [0,             0,                        0,                       1]])
+                         [sin(j+theta),  cos(j+theta)*cos(alpha), -cos(j+theta)*sin(alpha), a*sin(j+theta)], 
+                         [0,             sin(alpha),               cos(alpha),              d], 
+                         [0,             0,                        0,                       1]])
     
     def constraintJointLimits(self, config: np.array=None) -> np.array:
         """Constraints the configuration to the provided joint limits.
@@ -146,11 +171,24 @@ class Robot:
         return spefJ
 
     def saveAsBinary(self, directory: str):
+        """Save the constructed robot as a binary file. Can be used to avoid lengthy jacobian simplification.
+
+        Args:
+            directory (str): The path to the directory where the binary will be saved as 'robot.pickle'.
+        """
         with open(join(directory, "robot.pickle"), 'wb') as outFile:
             outFile.write(pickle.dumps(self))
 
     @staticmethod
     def loadRobotBinary(directory: str) -> "Robot":
+        """Construct a robot object with a binary file.
+
+        Args:
+            directory (str): The path to the 'robot.pickle' file.   
+
+        Returns:
+            Robot: The loaded robot.
+        """
         robot = None
         with open(join(directory, "robot.pickle"), 'rb') as inFile:
             robot = pickle.loads(inFile.read())
