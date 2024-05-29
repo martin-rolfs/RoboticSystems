@@ -1,5 +1,5 @@
 import numpy as np
-import pickle # to save jacobian as binary file
+import pickle # to save object as binary file
 import sympy as sp
 
 from math import sin, cos
@@ -10,8 +10,29 @@ from robotic_systems.pose import Transform
 
 class Robot:    
     def __init__(self, initConfig: np.array, dh_theta: np.array, dh_d: np.array, dh_a: np.array, dh_alpha: np.array, upperLimit: np.array, lowerLimit: np.array, position: np.array=np.zeros((3, 1))):
+        """Creates an robot model specified by its DH parameters. Only revolute joints are supported. 
+
+        Note, that the DH parameters are not expected to be the modified DH-Parameters.
+
+        Args:
+            initConfig (np.array): The initial configuration of the robot. The length of this array determines the number of joints.
+            dh_theta (np.array): The displacement of rotary joints. This value is added to the joint value.
+            dh_d (np.array): The translation along the last z axis to the next x axis.
+            dh_a (np.array): The translation along the next x axis to the origin of the last coordinate system.
+            dh_alpha (np.array): The rotation around the next x axis to align both z axes.
+            upperLimit (np.array): The upper joint limit.
+            lowerLimit (np.array): The lower joint limit.
+            position (np.array, optional): The position of the base frame of the robot in world space. Defaults to np.zeros((3, 1)).
+
+        Raises:
+            ValueError: If the number of DH parameters or joint limits does not match the configuration an error is thrown.
+        """
         self.config = initConfig
         self.nJoints = len(initConfig)
+
+        if len(upperLimit) < self.nJoints or len(lowerLimit) < self.nJoints or len(dh_theta) < self.nJoints or len(dh_a) < self.nJoints or len(dh_alpha) < self.nJoints or len(dh_d) < self.nJoints:
+           raise ValueError("Please specify enough joint limits and DH Parameters, according to the initial configuration!")
+
         self.upperLimit = upperLimit
         self.lowerLimit = lowerLimit
         self.dh = {
