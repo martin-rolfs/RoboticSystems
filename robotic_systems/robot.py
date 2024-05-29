@@ -9,19 +9,21 @@ from os.path import join
 from robotic_systems.pose import Transform
 
 class Robot:    
-    def __init__(self, initConfig: np.array, dh_theta: np.array, dh_d: np.array, dh_a: np.array, dh_alpha: np.array, upperLimit: np.array, lowerLimit: np.array, position: np.array=np.zeros((3, 1))):
-        """Creates an robot model specified by its DH parameters. Only revolute joints are supported. 
+    def __init__(self, initConfig: np.array, dh_theta: np.array, dh_d: np.array, dh_a: np.array, dh_alpha: np.array, upperLimit: np.array, lowerLimit: np.array, jointTypes: list=None, position: np.array=np.zeros((3, 1))):
+        """Creates an robot model specified by its DH parameters. The joint types define what DH parameter the configuration is influencing. 
+        In this case, the value provided for the parameters is added to the joint value. 
 
-        Note, that the DH parameters are not expected to be the modified DH-Parameters.
+        Note, that the DH parameters are NOT expected to be the modified DH parameters.
 
         Args:
             initConfig (np.array): The initial configuration of the robot. The length of this array determines the number of joints.
-            dh_theta (np.array): The displacement of rotary joints. This value is added to the joint value.
+            dh_theta (np.array): The rotation around the last z axis to align both x axes.
             dh_d (np.array): The translation along the last z axis to the next x axis.
             dh_a (np.array): The translation along the next x axis to the origin of the last coordinate system.
             dh_alpha (np.array): The rotation around the next x axis to align both z axes.
             upperLimit (np.array): The upper joint limit.
             lowerLimit (np.array): The lower joint limit.
+            jointTypes (list): A list of str specifying each joint type. Allowed str are: 'theta', 'd', 'a' and 'alpha'. Each corresponds to the appropriate DH parameter. If None, it defaults to revolute joints.
             position (np.array, optional): The position of the base frame of the robot in world space. Defaults to np.zeros((3, 1)).
 
         Raises:
@@ -42,6 +44,9 @@ class Robot:
             'alpha': dh_alpha
         }
 
+        if jointTypes is None:
+            jointTypes = ['theta'] * self.nJoints
+        self.jointTypes = jointTypes
         self.position = position # cartesian position in world space
         self.J = None
 
@@ -52,7 +57,7 @@ class Robot:
             toolTransformation (np.array, optional): The transformation matrix from the TFC to the TCP. Defaults to np.eye(4).
 
         Returns:
-            sp.Matrix: Returns the symbolic jacobian with the joint angles as unknowns.
+            sp.Matrix: Returns the symbolic jacobian with the joint values (j0, j1, ... , jn) as symbolics.
         """          
         T = sp.eye(4) # unit matrix
         # write position to first transformation
@@ -64,7 +69,7 @@ class Robot:
 
         # create transformation matrices
         for jIndex in range(self.nJoints):
-            T = T * self.getTransformMatrixSymbolic(self.dh['theta'][jIndex], self.dh['d'][jIndex], self.dh['a'][jIndex], self.dh['alpha'][jIndex], name=f"j{jIndex}")
+            T = T * self.getTransformMatrixSymbolic(jIndex, name=f"j{jIndex}")
 
             if jIndex == self.nJoints - 1:
                 T = T * toolTransformation
@@ -105,7 +110,7 @@ class Robot:
 
         # create transformation matrices
         for jIndex in range(self.nJoints):
-            T = T @ self.getTransformMatrix(self.dh['theta'][jIndex], self.dh['d'][jIndex], self.dh['a'][jIndex], self.dh['alpha'][jIndex], config[jIndex])
+            T = T @ self.getTransformMatrix(jIndex, config[jIndex])
 
             if jIndex == self.nJoints - 1:
                 T = T @ toolTransformation
@@ -135,20 +140,54 @@ class Robot:
 
         return poseInTCS
 
-    def getTransformMatrixSymbolic(self, theta: float, d: float, a: float, alpha: float, name: str="j") -> sp.Matrix:
-        # assume rotary joints only
+    def getTransformMatrixSymbolic(self, jointIndex: int, name: str="j") -> sp.Matrix:
+        # get base values
+        theta = self.dh['theta'][jointIndex]
+        alpha = self.dh['alpha'][jointIndex]
+        a = self.dh['a'][jointIndex]
+        d = self.dh['d'][jointIndex]
+
         j = sp.Symbol(name, real=True)
 
-        return sp.Matrix([[sp.cos(j+theta), -sp.sin(j+theta)*sp.cos(alpha),  sp.sin(j+theta)*sp.sin(alpha), a*sp.cos(j+theta)],
-                          [sp.sin(j+theta),  sp.cos(j+theta)*sp.cos(alpha), -sp.cos(j+theta)*sp.sin(alpha), a*sp.sin(j+theta)], 
-                          [0,                sp.sin(alpha),                  sp.cos(alpha),                 d], 
-                          [0,                0,                              0,                             1]])
+        # modify according to type with symbolic
+        match self.jointTypes[jointIndex]:
+            case 'theta':
+                theta = j + theta
+            case 'a':
+                a = j + a
+            case 'd':
+                d = j + d
+            case 'alpha':   
+                alpha = j + alpha     
+
+        # return symbolic matrix
+        return sp.Matrix([[sp.cos(theta), -sp.sin(theta)*sp.cos(alpha),  sp.sin(theta)*sp.sin(alpha), a*sp.cos(theta)],
+                          [sp.sin(theta),  sp.cos(theta)*sp.cos(alpha), -sp.cos(theta)*sp.sin(alpha), a*sp.sin(theta)], 
+                          [0,              sp.sin(alpha),                sp.cos(alpha),               d], 
+                          [0,              0,                            0,                           1]])
     
-    def getTransformMatrix(self, theta: float, d: float, a: float, alpha: float, j: float) -> np.ndarray:
-        return np.array([[cos(j+theta), -sin(j+theta)*cos(alpha),  sin(j+theta)*sin(alpha), a*cos(j+theta)],
-                         [sin(j+theta),  cos(j+theta)*cos(alpha), -cos(j+theta)*sin(alpha), a*sin(j+theta)], 
-                         [0,             sin(alpha),               cos(alpha),              d], 
-                         [0,             0,                        0,                       1]])
+    def getTransformMatrix(self, jointIndex: int, j: float) -> np.ndarray:
+        # get base values
+        theta = self.dh['theta'][jointIndex]
+        alpha = self.dh['alpha'][jointIndex]
+        a = self.dh['a'][jointIndex]
+        d = self.dh['d'][jointIndex]
+
+        # modify with joint value accordingly
+        match self.jointTypes[jointIndex]:
+            case 'theta':
+                theta = j + theta
+            case 'a':
+                a = j + a
+            case 'd':
+                d = j + d
+            case 'alpha':   
+                alpha = j + alpha     
+
+        return np.array([[cos(theta), -sin(theta)*cos(alpha),  sin(theta)*sin(alpha), a*cos(theta)],
+                         [sin(theta),  cos(theta)*cos(alpha), -cos(theta)*sin(alpha), a*sin(theta)], 
+                         [0,           sin(alpha),             cos(alpha),            d], 
+                         [0,           0,                      0,                     1]])
     
     def constraintJointLimits(self, config: np.array=None) -> np.array:
         """Constraints the configuration to the provided joint limits.
