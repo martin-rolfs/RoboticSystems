@@ -144,6 +144,14 @@ class Transform:
                 
     @staticmethod
     def invertHomogenousTransform(H: np.array) -> np.array:
+        """Computes the inverse of a homogenous transform matrix. 
+
+        Args:
+            H (np.array): The 4x4 homogenous transform matrix to invert.
+
+        Returns:
+            np.array: The inverted 4x4 matrix.
+        """
         invH = np.eye(4)
     
         R = H[0:3, 0:3].T
