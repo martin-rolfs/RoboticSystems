@@ -6,6 +6,8 @@ from math import sin, cos
 
 from os.path import join
 
+from sys import version_info
+
 from robotic_systems.pose import Transform
 
 class Robot:    
@@ -150,15 +152,25 @@ class Robot:
         j = sp.Symbol(name, real=True)
 
         # modify according to type with symbolic
-        match self.jointTypes[jointIndex]:
-            case 'theta':
+        if version_info[1] >= 10:
+            match self.jointTypes[jointIndex]:
+                case 'theta':
+                    theta = j + theta
+                case 'a':
+                    a = j + a
+                case 'd':
+                    d = j + d
+                case 'alpha':   
+                    alpha = j + alpha     
+        else:
+            if self.jointTypes[jointIndex] == 'theta':
                 theta = j + theta
-            case 'a':
+            elif self.jointTypes[jointIndex] == 'a':
                 a = j + a
-            case 'd':
+            elif self.jointTypes[jointIndex] == 'd':
                 d = j + d
-            case 'alpha':   
-                alpha = j + alpha     
+            elif self.jointTypes[jointIndex] == 'alpha':
+                alpha = j + alpha
 
         # return symbolic matrix
         return sp.Matrix([[sp.cos(theta), -sp.sin(theta)*sp.cos(alpha),  sp.sin(theta)*sp.sin(alpha), a*sp.cos(theta)],
@@ -174,15 +186,25 @@ class Robot:
         d = self.dh['d'][jointIndex]
 
         # modify with joint value accordingly
-        match self.jointTypes[jointIndex]:
-            case 'theta':
+        if version_info[1] >= 10:
+            match self.jointTypes[jointIndex]:
+                case 'theta':
+                    theta = j + theta
+                case 'a':
+                    a = j + a
+                case 'd':
+                    d = j + d
+                case 'alpha':   
+                    alpha = j + alpha     
+        else:
+            if self.jointTypes[jointIndex] == 'theta':
                 theta = j + theta
-            case 'a':
+            elif self.jointTypes[jointIndex] == 'a':
                 a = j + a
-            case 'd':
+            elif self.jointTypes[jointIndex] == 'd':
                 d = j + d
-            case 'alpha':   
-                alpha = j + alpha     
+            elif self.jointTypes[jointIndex] == 'alpha':
+                alpha = j + alpha    
 
         return np.array([[cos(theta), -sin(theta)*cos(alpha),  sin(theta)*sin(alpha), a*cos(theta)],
                          [sin(theta),  cos(theta)*cos(alpha), -cos(theta)*sin(alpha), a*sin(theta)], 
