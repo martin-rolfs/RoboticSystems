@@ -43,3 +43,15 @@ class Trajectory:
                         [ 0.0, 0.0,  0.0, 1.0]])
 
         return Transform(None, None, tfcTarget @ R_y)
+
+    @staticmethod
+    def converPointList(points: list) -> list:
+        """Converts list of np.array to list of three np.array holding each the seperate coordinates.
+
+        Args:
+            points (list): List of np.array
+
+        Returns:
+            list: List of coordinates compatible with Trajectory constructor.
+        """
+        return [np.array(p) for p in np.array(points).T]
