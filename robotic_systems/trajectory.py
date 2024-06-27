@@ -4,9 +4,10 @@ from scipy.interpolate import splprep, splev
 from robotic_systems.pose import Transform
 
 class Trajectory:
-    def __init__(self, anchorPoints: list, totalTime: float=1.0):
+    def __init__(self, anchorPoints: list, totalTime: float=1.0, startingTime: float=0.0):
         self.anchorPoints = anchorPoints
         self.totalTime = totalTime
+        self.startingTime = startingTime
 
         self.spline = self.constructTrajectory()
 
@@ -15,7 +16,7 @@ class Trajectory:
         return tck
 
     def getPoint(self, time: float):
-        u = time / self.totalTime
+        u = (time - self.startingTime) / self.totalTime
         p = splev(u, self.spline)
         return np.array([p[0], p[1], p[2]])
     
