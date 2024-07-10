@@ -20,8 +20,8 @@ class Trajectory:
         p = splev(u, self.spline)
         return np.array([p[0], p[1], p[2]])
     
-    def getPointForTFC(self, time: float, rcm: np.array, endoscopLength: float) -> Transform:
-        originalPoint = self.getPoint(time)
+    def getPointForTFC(self, time: float, rcm: np.array, endoscopLength: float, offset: np.array=np.array([0.0, 0.0, 0.0])) -> Transform:
+        originalPoint = self.getPoint(time) + offset
 
         diff = rcm - originalPoint
         dir = (diff) / np.linalg.norm(diff) 
