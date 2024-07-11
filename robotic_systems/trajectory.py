@@ -20,7 +20,8 @@ class Trajectory:
         p = splev(u, self.spline)
         return np.array([p[0], p[1], p[2]])
     
-    def convertPointForTFC(self, point: np.array, rcm: np.array, endoscopLength: float) -> Transform:
+    @staticmethod
+    def convertPointForTFC(point: np.array, rcm: np.array, endoscopLength: float) -> Transform:
         diff = rcm - point
         dir = (diff) / np.linalg.norm(diff) 
 
