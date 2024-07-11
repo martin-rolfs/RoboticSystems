@@ -20,13 +20,11 @@ class Trajectory:
         p = splev(u, self.spline)
         return np.array([p[0], p[1], p[2]])
     
-    def getPointForTFC(self, time: float, rcm: np.array, endoscopLength: float, offset: np.array=np.array([0.0, 0.0, 0.0])) -> Transform:
-        originalPoint = self.getPoint(time) + offset
-
-        diff = rcm - originalPoint
+    def convertPointForTFC(self, point: np.array, rcm: np.array, endoscopLength: float) -> Transform:
+        diff = rcm - point
         dir = (diff) / np.linalg.norm(diff) 
 
-        tfcPoint = originalPoint + dir * endoscopLength
+        tfcPoint = point + dir * endoscopLength
         #print(f"TFC Point: {tfcPoint}")
 
         xAxis = np.cross(dir, np.array([1, 0, 0]))
