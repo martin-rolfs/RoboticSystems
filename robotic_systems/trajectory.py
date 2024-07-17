@@ -9,17 +9,19 @@ class Trajectory:
         self.totalTime = totalTime
         self.startingTime = startingTime
         self.anchorValues = []
+        self.dimension = 3
 
         self.spline = self.constructTrajectory()
 
     def constructTrajectory(self):
+        self.dimension = np.array(self.anchorPoints).shape[0]
         tck, self.anchorValues = splprep(self.anchorPoints, s=0, per=1, nest=-1)
         return tck
 
     def getPoint(self, time: float):
         u = (time - self.startingTime) / self.totalTime
         p = splev(u, self.spline)
-        return np.array([p[0], p[1], p[2]])
+        return np.array(p)
     
     def checkAnchorValues(self, index: int, time: float) -> int:
         """Checks whether point at specified time lies before or after a anchor point which was used for construction.
