@@ -8,17 +8,37 @@ class Trajectory:
         self.anchorPoints = anchorPoints
         self.totalTime = totalTime
         self.startingTime = startingTime
+        self.anchorValues = []
 
         self.spline = self.constructTrajectory()
 
     def constructTrajectory(self):
-        tck, _ = splprep(self.anchorPoints, s=0, per=1, nest=-1)
+        tck, self.anchorValues = splprep(self.anchorPoints, s=0, per=1, nest=-1)
         return tck
 
     def getPoint(self, time: float):
         u = (time - self.startingTime) / self.totalTime
         p = splev(u, self.spline)
         return np.array([p[0], p[1], p[2]])
+    
+    def checkAnchorValues(self, index: int, time: float) -> int:
+        """Checks whether point at specified time lies before or after a anchor point which was used for construction.
+
+        Args:
+            index (int): The index of the anchor point.
+            time (float): The time of the point on the trajectory.
+
+        Returns:
+            int: Returns -1 if point comes before anchor point, 1 if it comes after and 0 if it lies directly on anchor point.
+        """
+        u = (time - self.startingTime) / self.totalTime
+
+        if self.anchorValues[index] > u:
+            return -1
+        elif self.anchorValues[index] == u:
+            return 0
+        else:
+            return 1
     
     @staticmethod
     def convertPointForTFC(point: np.array, rcm: np.array, endoscopLength: float) -> Transform:
