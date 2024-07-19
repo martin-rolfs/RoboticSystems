@@ -43,7 +43,7 @@ class Trajectory:
             return 1
     
     @staticmethod
-    def convertPointForTFC(point: np.array, rcm: np.array, endoscopLength: float) -> Transform:
+    def convertPointForTFC(point: np.array, rcm: np.array, endoscopLength: float, rotate: bool=True) -> Transform:
         diff = rcm - point
         dir = (diff) / np.linalg.norm(diff) 
 
@@ -59,10 +59,13 @@ class Trajectory:
                               [       0,        0,      0,           1]])
         
         # rotate final coordinate system 180 degrees around its z axis
-        R_y = np.array([[-1.0, 0.0,  0.0, 0.0],
-                        [ 0.0, 1.0,  0.0, 0.0],
-                        [ 0.0, 0.0, -1.0, 0.0],
-                        [ 0.0, 0.0,  0.0, 1.0]])
+        if rotate:
+            R_y = np.array([[-1.0, 0.0,  0.0, 0.0],
+                            [ 0.0, 1.0,  0.0, 0.0],
+                            [ 0.0, 0.0, -1.0, 0.0],
+                            [ 0.0, 0.0,  0.0, 1.0]])
+        else:
+            R_y = np.eye(4)
 
         return Transform(None, None, tfcTarget @ R_y)
 
