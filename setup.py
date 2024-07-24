@@ -6,7 +6,6 @@ LONG_DESCRIPTION = 'Defines a robot model and a trajectory class that can be use
 
 # Setting up
 setup(
-       # the name must match the folder name 'verysimplemodule'
         name="robotic_systems", 
         version=VERSION,
         author="Martin Rolfs",
@@ -14,8 +13,7 @@ setup(
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         packages=find_packages(),
-        install_requires=['numpy', 'sympy', 'scipy'], # add any additional packages that 
-        # needs to be installed along with your package. Eg: 'caer'
+        install_requires=['numpy', 'sympy', 'scipy'], 
         
         keywords=['python', 'robot'],
         classifiers= [
