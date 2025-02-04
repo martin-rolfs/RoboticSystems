@@ -143,6 +143,24 @@ class Transform:
         return q
                 
     @staticmethod
+    def quat2rot(x: float, y: float, z: float, w: float) -> np.array:
+        """Converts a quaternion to a rotation matrix.
+
+        Args:
+            x (float): i component.
+            y (float): j component.
+            z (float): k component.
+            w (float): real component.
+
+        Returns:
+            np.array: The 3x3 rotation matrix.
+        """
+        R = np.array([[1 - 2*y*y - 2*z*z, 2*x*y - 2*w*z, 2*x*z + 2*w*y],
+                      [2*x*y + 2*w*z, 1-2*x*x-2*z*z, 2*y*z-2*w*x],
+                      [2*x*z - 2*w*y, 2*y*z + 2*w*x, 1-2*x*x-2*y*y]])
+        return R
+
+    @staticmethod
     def invertHomogenousTransform(H: np.array) -> np.array:
         """Computes the inverse of a homogenous transform matrix. 
 

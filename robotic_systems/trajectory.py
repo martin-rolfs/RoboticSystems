@@ -43,11 +43,11 @@ class Trajectory:
             return 1
     
     @staticmethod
-    def convertPointForTFC(point: np.array, rcm: np.array, endoscopLength: float, rotate: bool=True, referenceVector: np.array=None) -> Transform:
+    def convertPointForTFC(point: np.array, rcm: np.array, tfc_to_rcm_tanslation: np.array, rotate: bool=True, referenceVector: np.array=None, moveInRCM: bool=False) -> Transform:
         diff = rcm - point
-        dir = (diff) / np.linalg.norm(diff) 
+        dir = (diff) / np.linalg.norm(diff)            
 
-        tfcPoint = point + dir * endoscopLength
+        tfcPoint = point + ((dir * (np.linalg.norm(diff) + np.linalg.norm(tfc_to_rcm_tanslation))) if not moveInRCM else diff)
 
         # create unit vector
         if type(referenceVector) == type(None):
